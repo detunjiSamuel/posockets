@@ -45,7 +45,7 @@ function renderIntro() {
   // Canvas Background
   context.fillStyle = "black";
   context.fillRect(0, 0, width, height);
-  console.log("renderIntro loaded");
+
   // Intro Text
   context.fillStyle = "white";
   context.font = "32px Courier New";
@@ -92,6 +92,12 @@ function ballReset() {
   ballX = width / 2;
   ballY = height / 2;
   speedY = 3;
+  socket.emit("ballMove", {
+    ballY,
+    ballX,
+    score,
+    host,
+  });
 }
 
 // Adjust Ball Movement
@@ -102,6 +108,13 @@ function ballMove() {
   if (playerMoved) {
     ballX += speedX;
   }
+  // hostBallY, hostBallX, hostScore
+  socket.emit("ballMove", {
+    ballX,
+    ballY,
+    score,
+    host,
+  });
 }
 
 // Determine What Ball Bounces Off, Score Points, Reset Ball
@@ -128,6 +141,7 @@ function ballBoundaries() {
       ballDirection = -ballDirection;
       trajectoryX[0] = ballX - (paddleX[0] + paddleDiff);
       speedX = trajectoryX[0] * 0.3;
+
     } else {
       // Reset Ball, add to Computer Score
       ballReset();
@@ -157,9 +171,11 @@ function ballBoundaries() {
 
 // Called Every Frame
 function animate() {
-  ballMove();
+  if (isHost) {
+    ballMove();
+    ballBoundaries();
+  }
   renderCanvas();
-  ballBoundaries();
   window.requestAnimationFrame(animate);
 }
 
@@ -209,9 +225,11 @@ socket.on("matched", (payload) => {
 });
 
 socket.on("paddleMove", (payload) => {
-  // handle movement
-  console.log(payload);
   const { postion } = payload;
   let index = Math.abs(paddleIndex - 1);
   paddleX[index] = postion;
+});
+
+socket.on("ballMove", (payload) => {
+  ({ ballX, ballY, score } = payload);
 });
